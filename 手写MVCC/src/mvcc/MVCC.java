@@ -22,6 +22,7 @@ public class MVCC {
             node.commit = true;
             node.line.node = node;
             node.line.updateId.set(0);
+            node.line.updateId.notifyAll();
         });
     }
 
@@ -35,11 +36,11 @@ public class MVCC {
             case 2: {
                 Node node = table.get(lineNum).node;
                 Object value = null;
-                while (node != null){
-                    if(node.isUpdate && node.commit){
+                while (node != null) {
+                    if (node.isUpdate && node.commit) {
                         value = node.value;
                     }
-                    if(node.isUpdate && node.transactionId == transactionId){
+                    if (node.isUpdate && node.transactionId == transactionId) {
                         value = node.value;
                         break;
                     }
