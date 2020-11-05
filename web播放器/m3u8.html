@@ -1,0 +1,13 @@
+<script src="https://cdn.jsdelivr.net/hls.js/latest/hls.min.js"></script>
+<video controls muted id="video"></video>
+<script>
+  if(Hls.isSupported()) {
+    var video = document.getElementById('video');
+    var hls = new Hls();
+    hls.loadSource('http://127.0.0.1/oflaDemo/file_vip.flv/playlist.m3u8');
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED,function() {
+      video.play();
+  });
+ }
+</script>
