@@ -22,7 +22,9 @@ public class MVCC {
             node.commit = true;
             node.line.node = node;
             node.line.updateId.set(0);
-            node.line.updateId.notifyAll();
+            synchronized (node.line.updateId) {
+                node.line.updateId.notifyAll();
+            }
         });
     }
 
@@ -83,7 +85,10 @@ public class MVCC {
 
     private Node flushMyNode(Node node, Object value, long transactionId) {
         Node tail = node;
-        while (tail.next != null && !(tail.isUpdate || tail.transactionId != transactionId)) {
+        while (tail.next != null) {
+            if (tail.isUpdate && tail.transactionId == transactionId) {
+                break;
+            }
             tail = tail.next;
         }
         if (tail.transactionId == transactionId && tail.isUpdate) {
