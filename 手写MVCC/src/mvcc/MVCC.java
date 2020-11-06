@@ -132,23 +132,25 @@ public class MVCC {
      * @return
      */
     private Node flushMyNode(Node node, Object value, long transactionId) {
-        Node tail = node;
-        while (tail.next != null) {
-            if (tail.isUpdate && tail.transactionId == transactionId) {
-                break;
+        synchronized (node.line) {
+            Node tail = node;
+            while (tail.next != null) {
+                if (tail.isUpdate && tail.transactionId == transactionId) {
+                    break;
+                }
+                tail = tail.next;
             }
-            tail = tail.next;
+            if (tail.transactionId == transactionId && tail.isUpdate) {
+                tail.value = value;
+            } else {
+                Node newNode = new Node(transactionId, tail, null, value, false);
+                newNode.isUpdate = true;
+                newNode.line = tail.line;
+                tail.next = newNode;
+                tail = newNode;
+            }
+            return tail;
         }
-        if (tail.transactionId == transactionId && tail.isUpdate) {
-            tail.value = value;
-        } else {
-            Node newNode = new Node(transactionId, tail, null, value, false);
-            newNode.isUpdate = true;
-            newNode.line = tail.line;
-            tail.next = newNode;
-            tail = newNode;
-        }
-        return tail;
     }
 
     /**
@@ -168,5 +170,26 @@ public class MVCC {
         line.lineNum = table.size();
         table.add(line);
         return line.lineNum;
+    }
+
+    public void callback(long transactionId) {
+        Set<Node> updateNodes = transactionMap.remove(transactionId);
+        if (updateNodes == null) {
+            return;
+        }
+        updateNodes.forEach(node -> {
+            node.line.updateId.set(0);
+            synchronized (node.line) {
+                if (node.pre != null) {
+                    node.pre.next = node.next;
+                }
+                if (node.next != null) {
+                    node.next.pre = node.pre;
+                }
+            }
+            synchronized (node.line.updateId) {
+                node.line.updateId.notifyAll();
+            }
+        });
     }
 }
